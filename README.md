@@ -1,7 +1,8 @@
-# nnn.vim
+> **NOTICE:** This repository is looking for a new owner+maintainer as I want to dedicate my focus on maintaining [xplr](https://github.com/sayanarijit/xplr). Please [contact me](https://arijitbasu.in) in case you are interested.
 
-File manager for vim/neovim powered by n³.
+# xplr.vim
 
+ patch-18
 https://user-images.githubusercontent.com/7200153/127453278-3e638e33-707a-49c8-b34e-225c225906b1.mov
 
 <p align="center">
@@ -24,8 +25,20 @@ Then install the plugin using your plugin manager:
 ```vim
 " using vim-plug
 Plug 'mcchrish/nnn.vim'
-```
 
+This is a fork of [nnn.vim](https://github.com/mcchrish/nnn.vim) modified to work with
+[xplr](https://github.com/sayanarijit/xplr).
+
+
+### Examples
+
+Git project root
+
+ master
+```
+command XplrProjectRoot :XplrPicker `git rev-parse --show-toplevel`
+
+ patch-18
 ## Usage
 
 To open n³ as a file picker in vim/neovim, use the command `:NnnPicker` or the
@@ -166,3 +179,24 @@ require("nnn").setup({
 ## Credits
 
 Main [n³ repository](https://github.com/jarun/nnn).
+
+:XplrProjectRoot
+```
+
+Current file
+
+```
+:XplrPicker %:p
+```
+
+Current working directory
+
+```
+:XplrPicker
+```
+
+Root
+```
+:XplrPicker /
+```
+ master

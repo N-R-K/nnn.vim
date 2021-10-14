@@ -17,8 +17,16 @@ if !exists('g:nnn#action')
     let g:nnn#action = {}
 endif
 
+
+patch-18
 if !exists('g:nnn#command')
     let g:nnn#command = 'nnn'
+
+
+if !(exists("g:nnn#command"))
+    let g:nnn#command = 'xplr'
+
+master
 endif
 
 if !exists('g:nnn#statusline')
@@ -32,6 +40,9 @@ endif
 if !exists('g:nnn#set_default_mappings')
     let g:nnn#set_default_mappings = 1
 endif
+
+command! -bar -nargs=? -complete=dir XplrPicker call nnn#pick(<f-args>)
+command! -bar -nargs=? -complete=dir Xp call nnn#pick(<f-args>)
 
 if g:nnn#set_default_mappings
     nnoremap <silent> <leader>n :NnnPicker<CR>

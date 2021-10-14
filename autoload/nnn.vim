@@ -261,6 +261,7 @@ function! nnn#pick(...) abort
     let l:default_opts = { 'edit': 'edit' }
     let l:opts = extend(l:default_opts, get(a:, 2, {}))
     let s:temp_file = tempname()
+ patch-18
 
     if g:nnn#session ==# 'none' || get(l:opts, 'session', 0)
         let l:sess_cfg = ' '
@@ -275,6 +276,10 @@ function! nnn#pick(...) abort
     endif
 
     let l:cmd = g:nnn#command.l:sess_cfg.' -p '.shellescape(s:temp_file).' '.(l:directory != '' ? shellescape(l:directory): '')
+
+    let l:cmd = g:nnn#command.' > '.shellescape(s:temp_file).' '.(l:directory != '' ? shellescape(l:directory): '')
+
+master
     let l:layout = exists('l:opts.layout') ? l:opts.layout : g:nnn#layout
 
     let l:opts.layout = l:layout
