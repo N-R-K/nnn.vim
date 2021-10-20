@@ -1,4 +1,4 @@
-*nnn.vim* n³ file manager plugin for vim/neovim.
+*nnn.vim* File manager for vim/neovim powered by n³.
 *nnn*
 >
   __   __     __   __     __   __     __   __   __     __    __
@@ -18,6 +18,7 @@ CONTENTS *nnn-help*
     Mappings .............................. |nnn-mappings|
     Configurations ........................ |nnn-config|
     Functions ............................. |nnn-func|
+    Highlights ............................ |nnn-hl|
   Miscellaneous ......................... |nnn-misc|
   Credits ............................... |nnn-credits|
 
@@ -33,7 +34,9 @@ terminal feature of vim and neovim.
 Requirements                                                          *nnn-req*
 
 1. n³
-2. Neovim or Vim 8.1 with terminal support
+2. `has('nvim') || has('terminal')` i.e. terminal support
+3. Optional `has('nvim-0.5') || has('popupwin')` for floating window
+4. Optional n³ v4.3(+) needed for file-explorer mode
 
 =============================================================================
 Usage                                                               *nnn-usage*
@@ -41,28 +44,34 @@ Usage                                                               *nnn-usage*
 By running |:NnnPicker| or calling the |nnn#pick()| function, a new terminal
 buffer opens running an n³ process in picker mode.
 
+To open n³ as a file-explorer use the command |:NnnExplorer|. The command
+accepts optional path similar to |:NnnPicker|.
+
 Once you select (see https://github.com/jarun/nnn/wiki/concepts#selection)
 one or more files and press enter, vim quits the n³ window and opens the
 first selected file and add the remaining files to the arg list/buffer
-list.
+list. If |nnn#session| is enabled, then n³ will remember where you left off of
+when you reopen it.
 
-Pressing enter on a file in n³ will pick any earlier selection, pick
-the file and exit n³.
+Pressing enter on a file in n³ will pick any earlier selection (or the hovered
+file if no selection exists) and exit n³.
 
-Note that pressing <kbd>l</kbd> or <kbd>Right</kbd> on a file would open it
-instead of picking.
+Note that pressing `l` or <Right> on a file would open it instead of picking.
+Use `-o` via |nnn#command| to disable this.
 
 You may have to set `set hidden` to make floating window work.
 
-To discard selection and exit, press ^G.
+To discard selection and/or exit, press q.
+
+Press <c-g> to quit n³ and `cd` into the last directory.
 
 -----------------------------------------------------------------------------
 Commands                                                         *nnn-commands*
 
 :NnnPicker                                                         *:NnnPicker*
                   Opens an n³ window.
-:Np                                                                       *:Np*
-                  Does the same as :NnnPicker.
+:NnnExplorer
+                  Opens an n³ file-explorer.
 
 -----------------------------------------------------------------------------
 Mappings                                                         *nnn-mappings*
@@ -72,6 +81,10 @@ Defaults mappings. Can be disabled by setting |g:nnn#set_default_mappings| to
 
 <leader>n
                   Runs |:NnnPicker|.
+<C-w>h/j/k/l
+                  Switches out of the nnn window.
+                  Useful when using explorer mode.
+
 
 -----------------------------------------------------------------------------
 Configurations                                                     *nnn-config*
@@ -87,6 +100,8 @@ g:nnn#set_default_mappings                         *g:nnn#set_default_mappings*
                   " Set your own
                   nnoremap <silent> <leader>nn :NnnPicker<CR>
 
+                  " Switch away from file-explorer (assuming left sided) via <C-l>
+                  autocmd FileType nnn tnoremap <nowait><buffer><silent> <C-l> <C-\><C-n><C-w>l
 
                   " Or override
                   " Start n³ in the current file's directory
@@ -94,11 +109,13 @@ g:nnn#set_default_mappings                         *g:nnn#set_default_mappings*
 <
 
 g:nnn#layout                                                     *g:nnn#layout*
-                  Default: 'enew'
-                  Display type for the n³ buffer. Default is |enew|, which
-                  has a special behavior to act as a "split explorer" reusing
-                  the current window and brings back the last buffer if
-                  nothing is selected.
+                  Default:
+                    neovim: { 'window': { 'width': 0.9, 'height': 0.6 } }
+                    vim: 'enew'
+                  Display type for the n³ buffer. Default is a floating window
+                  on neovim and |enew| on vim. |enew| has a special behavior
+                  to act as a "split explorer" reusing the current window and
+                  brings back the last buffer if nothing is selected.
                   Examples:
 >
                   " Opens the n³ window in a split
@@ -107,13 +124,19 @@ g:nnn#layout                                                     *g:nnn#layout*
                   " Or pass a dictionary with window size
                   let g:nnn#layout = { 'left': '~20%' } " or right, up, down
 
-                  " Floating window (neovim only for now)
+                  " Floating window
                   let g:nnn#layout = { 'window': { 'width': 0.9, 'height': 0.6, 'highlight': 'Debug' } }
                   " Options:
                   " width, height, yoffset, xoffset : number
                   " highlight : highlight group assign to the border
-                  " border : border style - 'rounded' / 'sharp' / 'horizontal' / 'vertical' / 'top' / 'bottom' / 'left' / 'right'
+                  " border : border style - 'rounded' / 'sharp' / 'none'
 <
+g:nnn#explorer_layout                                   *g:nnn#explorer_layout*
+
+                  Default:  { 'left': '20%' }
+
+                  Same as g:nnn#layout but for the explorer mode.
+
 
 g:nnn#action                                                     *g:nnn#action*
                   Default: {}
@@ -122,6 +145,15 @@ g:nnn#action                                                     *g:nnn#action*
                   override n³'s own key-bindings.
                   Examples:
 >
+                  function! CopyLinestoRegister(lines)
+                    let joined_lines = join(a:lines, "\n")
+                    if len(a:lines) > 1
+                      let joined_lines .= "\n"
+                    endif
+                    echom joined_lines
+                    let @+ = joined_lines
+                  endfunction
+
                   let g:nnn#action = {
                         \ '<c-t>': 'tab split',
                         \ '<c-x>': 'split',
@@ -136,14 +168,30 @@ g:nnn#action                                                     *g:nnn#action*
                   And finally you can pass a FuncRef and the array of selected
                   lines will be passed to that function.
 
-                  function! CopyLinestoRegister(lines)
-                    let joined_lines = join(a:lines, "\n")
-                    if len(a:lines) > 1
-                      let joined_lines .= "\n"
+                  Another example, cd into selected file's directory:
+
+                  function! CdSelectedFile(lines)
+                    let dir = a:lines[-1]
+                    if filereadable(dir)
+                      let dir = fnamemodify(dir, ':h')
                     endif
-                    echom joined_lines
-                    let @+ = joined_lines
+                    execute 'cd' dir
                   endfunction
+
+                  let g:nnn#action = { '<c-w>': function('CdSelectedFile') }
+<
+
+g:nnn#session                                                   *g:nnn#session*
+                  Default: 'none'
+                  How n³ should utilize sessions. Default is 'none' meaning
+                  no persistent sessions. Other options are 'local' for the
+                  same n³ session across a vim session, or 'global' for the
+                  same n³ session across everywhere.
+>
+                  " use the same nnn session within a vim session, for
+                  " example, so that consecutive uses of :Np will remember
+                  " where you last left off
+                  let g:nnn#session = 'local'
 <
 
 g:nnn#command                                                   *g:nnn#command*
@@ -171,6 +219,18 @@ g:nnn#shell                                                      *g:nnn#shell*
                   Default: &shell
                   The shell to run the terminal window.
 
+require('nnn').setup{}                                         *nnn-lua-setup*
+                  Default: same as Vimscript defaults
+                  An alternative way to configure n³ more suitable for
+                  init.lua users. For example:
+>
+                  require('nnn').setup{
+                      set_default_mappings = false,
+                      session = 'global',
+                      layout = { left = '20%' }
+                  }
+<
+
 
 -----------------------------------------------------------------------------
 Functions                                                            *nnn-func*
@@ -182,16 +242,28 @@ nnn#pick([{dir}][,{opts}])                                         *nnn#pick()*
 
                   {dir} : (string) a directory.
                   {opts}: (dict) can be:
-                    edit  : type of window the select file will be open. Or
-                            pass a FuncRef and array of selected files will be
-                            passed to that function.
-                    layout: same as |g:nnn#layout| and overrides it if
+                    edit   : type of window the select file will be open. Or
+                             pass a FuncRef and array of selected files will
+                             be passed to that function.
+                    layout : same as |g:nnn#layout| and overrides it if
                              specified.
+                    session: set to 0 to disable session regardless of
+                             |g:nnn#session| value.
 
                   Example:
 >
-                  call nnn#pick('~/some-files', { 'edit': 'vertical split' })
+                  call nnn#pick('~/some-directory', { 'edit': 'vertical split' })
 <
+nnn#explorer([{dir}][,{opts}])                                 *nnn#explorer()*
+                  Same as |nnn#pick()| but for explorer mode.
+
+-----------------------------------------------------------------------------
+Highlights                                                             *nnn-hl*
+
+The following are the highlight groups that are used:
+
+NnnNormal: window hl group. Linked to |hl-Normal|.
+NnnBorder: floating window border. Linked to |hl-FloatBorder| or |hl-Comment|.
 
 =============================================================================
 Miscellaneous                                                        *nnn-misc*
